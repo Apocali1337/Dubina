@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dubina: Deluxe Edition</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Použití fontu Share Tech Mono pro terminálový vzhled -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <!-- Font Awesome pro ikony -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Základní styly pro tělo stránky */
+        body {
+            font-family: 'Share Tech Mono', monospace; /* Terminálový font */
+            background-color: #000000; /* Čistě černé pozadí */
+            color: #d1ffb8; /* Světle zelený text */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+            box-sizing: border-box;
+            position: relative; /* Pro overlay matrix */
+            overflow: hidden; /* Aby matrix nepřetékal */
+        }
+
+        /* Matrix pozadí pomocí pseudo-elementu */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Puts it behind the game content */
+            background-color: #000000; /* Base dark background */
+            background-image:
+                repeating-linear-gradient(0deg, rgba(0, 255, 0, 0.03) 0px, rgba(0, 255, 0, 0.03) 1px, transparent 1px, transparent 3px),
+                repeating-linear-gradient(90deg, rgba(0, 255, 0, 0.03) 0px, rgba(0, 255, 0, 0.03) 1px, transparent 1px, transparent 3px);
+            background-size: 4px 4px; /* Velikost "pixelů" */
+            animation: matrix-subtle-glow 15s linear infinite alternate; /* Jemné pulzování/pohyb */
+            opacity: 1; 
+        }
+
+        @keyframes matrix-subtle-glow {
+            0% { background-position: 0 0; }
+            100% { background-position: 100% 100%; }
+        }
+
+        /* Kontejner hry */
+        #game-container {
+            background-color: #000000; /* Stejné pozadí jako body */
+            border-radius: 0; /* Ostré rohy */
+            padding: 0; /* Minimalistický padding na kontejneru */
+            width: 100%;
+            max-width: 650px; /* Zvětšená šířka */
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0; /* Bez mezery mezi hlavními segmenty */
+            border: 1px solid #1a2a1a; /* Jemný okraj pro vizuální oddělení */
+        }
+        /* Styly pro nadpisy sekcí (pokud by se někdy vrátily) */
+        .section-title {
+            color: #79d70f; /* Jasně zelená */
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
+            text-transform: uppercase;
+        }
+        /* Styly pro primární tlačítka */
+        .btn-primary {
+            background-color: #1a2a1a; /* Velmi tmavá zelená pro výchozí stav */
+            color: #d1ffb8; /* Světle zelený text */
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.25rem; /* Zaoblené rohy */
+            font-weight: 700;
+            transition: background-color 0.1s, color 0.1s;
+            box-shadow: none;
+            text-transform: uppercase;
+            border: 1px solid #79d70f; /* Zelený okraj */
+        }
+        /* Hover efekt pro primární tlačítka */
+        .btn-primary:hover:not(:disabled) {
+            background-color: #79d70f; /* Jasně zelená při najetí */
+            color: #0d120a; /* Tmavý text */
+            transform: none; /* Bez transformace */
+        }
+        /* Styly pro deaktivovaná primární tlačítka */
+        .btn-primary:disabled {
+            opacity: 0.5; /* Vyšší průhlednost pro disabled */
+            cursor: not-allowed;
+            background-color: #0f1a0f; /* Tmavší zelená pro disabled */
+            border-color: #378b29; /* Odpovídající okraj */
+            color: #708070; /* Ztlumená zelená barva textu */
+        }
+        /* Styly pro sekundární tlačítka (pro záložky) */
+        .btn-secondary {
+            background-color: transparent;
+            color: #d1ffb8;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem; /* Zaoblené rohy */
+            font-weight: 700;
+            transition: color 0.1s, border-color 0.1s;
+            border-bottom: 2px solid transparent; /* Pro zelenou čáru pod aktivní záložkou */
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        /* Hover efekt pro sekundární tlačítka */
+        .btn-secondary:hover:not(:disabled) {
+            color: #79d70f; /* Jasně zelená */
+        }
+        /* Styly pro deaktivovaná sekundární tlačítka */
+        .btn-secondary:disabled {
+            opacity: 0.5; /* Nastaveno na 0.5 pro viditelnost */
+            cursor: not-allowed;
+            color: #708070; /* Ztlumená zelená barva textu */
+        }
+        /* Styly pro karty položek */
+        .item-card {
+            background-color: #0a0a0a; /* Stejné pozadí */
+            padding: 0.75rem 1rem; /* Menší padding */
+            border-radius: 0.25rem; /* Zaoblené rohy */
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem; /* Menší mezera */
+            box-shadow: none;
+            border-bottom: 1px solid #1a2a1a; /* Jemný oddělovač */
+        }
+        .item-card:last-child {
+            border-bottom: none; /* Bez okraje u posledního prvku */
+        }
+        .item-card-details {
+            flex-grow: 1;
+        }
+        .item-card-title {
+            font-weight: 700;
+            font-size: 1rem; /* Menší název */
+            color: #d1ffb8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.25rem; /* Menší mezera */
+        }
+        .item-card-title .price {
+            color: #79d70f; /* Jasně zelená */
+            font-size: 0.9rem;
+        }
+        .item-card-stats {
+            font-size: 0.8rem; /* Menší text statistik */
+            color: #a0f0a0; /* Světlejší zelená */
+        }
+        /* Styly pro položky achievementů */
+        .achievement-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            background-color: #0a0a0a;
+            padding: 0.75rem 1rem;
+            border-radius: 0.25rem; /* Zaoblené rohy */
+            border-bottom: 1px solid #1a2a1a;
+        }
+        .achievement-item:last-child {
+            border-bottom: none;
+        }
+        .achievement-item-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.25rem;
+            font-size: 0.8rem;
+            color: #a0f0a0;
+            width: 100%;
+            justify-content: space-between;
+        }
+        /* Styly pro splněné achievementy */
+        .achievement-item.completed {
+            color: #79d70f;
+        }
+        .achievement-item.completed .check-icon {
+            color: #79d70f;
+        }
+        /* Ikona zaškrtnutí/prázdného čtverce pro achievementy */
+        .check-icon {
+            margin-right: 0.25rem;
+            color: #a0f0a0;
+        }
+        /* Styly pro aktivní záložkové tlačítko */
+        .tab-button.active-tab {
+            border-color: #79d70f; /* Jasně zelený spodní okraj */
+            color: #79d70f; /* Jasně zelený text */
+        }
+        /* Skrytí záložkového panelu */
+        .tab-panel.hidden {
+            display: none;
+        }
+        /* Styl pro zprávu o výdělku z kliknutí */
+        #click-feedback {
+            color: #79d70f;
+            transition: opacity 0.5s ease-out;
+            font-weight: 700;
+        }
+
+        /* Styl pro log panel */
+        #operation-log-container {
+            background-color: #0a0a0a;
+            border-radius: 0;
+            padding: 0;
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+            margin-top: 0;
+            border-top: 1px solid #1a2a1a; /* Jemný oddělovač */
+            padding-top: 0;
+        }
+
+        #operation-log {
+            height: 12rem; /* Pevná výška pro 10 řádků */
+            overflow: hidden;
+            background-color: transparent;
+            border-radius: 0;
+            padding: 0.5rem 1rem; /* Padding pro log */
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            border: none;
+            display: grid;
+            grid-template-columns: 100px 1fr auto; /* Upravené šířky sloupců */
+            column-gap: 0.5rem;
+            grid-template-rows: repeat(10, 1.2rem);
+            align-content: start;
+        }
+
+        .log-entry {
+            display: contents;
+        }
+
+        .log-entry .log-prefix {
+            font-weight: 700;
+            color: #79d70f; /* Jasně zelená */
+            white-space: nowrap;
+        }
+
+        .log-entry .log-message {
+            color: #d1ffb8; /* Světle zelený text zprávy */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .log-entry .log-amount {
+            color: #79d70f; /* Jasně zelená pro získané peníze */
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        /* Styling pro červený text při ztrátě */
+        .log-entry.loss .log-message,
+        .log-entry.loss .log-amount,
+        .log-entry.loss .log-prefix {
+            color: #ff6b6b; /* Červenější */
+        }
+        /* Styling pro výzkum aktivovaný (žlutá) */
+        .log-entry.research-activated .log-message,
+        .log-entry.research-activated .log-amount,
+        .log-entry.research-activated .log-prefix {
+            color: #ffea00; /* Žlutější */
+        }
+
+
+        /* Styly pro ikony hlavy botů */
+        .bot-head-icon {
+            display: inline-block;
+            width: 14px; /* Menší ikony */
+            height: 14px;
+            vertical-align: middle;
+            margin-left: 2px;
+        }
+        .bot-head-icon.white { fill: #d1ffb8; }
+        .bot-head-icon.green { fill: #79d70f; }
+        .bot-head-icon.blue { fill: #60a5fa; } /* Modrá zůstává */
+        .bot-head-icon.purple { fill: #c084fc; } /* Fialová zůstává */
+
+        /* Styly pro modální okno mini-hry */
+        #mini-game-modal {
+            animation: fadeIn 0.3s ease-out;
+            background-color: rgba(0, 0, 0, 0.95); /* Tmavší překrytí */
+        }
+        #mini-game-modal .bg-zinc-800 {
+            background-color: #1a2a1a; /* Tmavší zelená */
+            border: 1px solid #79d70f; /* Zelený okraj */
+            color: #d1ffb8;
+            border-radius: 0.25rem; /* Zaoblené rohy */
+        }
+        #mini-game-modal h3 {
+            color: #79d70f;
+        }
+        #mini-game-modal p {
+            color: #a0f0a0;
+        }
+        #mini-game-modal #code-display {
+            background-color: #0d120a; /* Velmi tmavé pozadí pro kód */
+            color: #d1ffb8; /* Zelený kód */
+            border: 1px solid #79d70f;
+            text-shadow: 0 0 5px #79d70f; /* Lehký neonový efekt */
+            border-radius: 0.25rem; /* Zaoblené rohy */
+        }
+        #mini-game-modal #code-input {
+            background-color: #0d120a;
+            border: 1px solid #79d70f;
+            color: #d1ffb8;
+            border-radius: 0.25rem; /* Zaoblené rohy */
+        }
+        #mini-game-modal #code-input:focus {
+            ring-color: #79d70f;
+            box-shadow: 0 0 5px #79d70f;
+        }
+        #mini-game-modal #timer-display {
+            color: #79d70f;
+        }
+        #mini-game-modal #mini-game-feedback {
+            font-weight: 700;
+        }
+
+        /* Nové styly pro kompaktní sekci náboru a výzkumu */
+        .compact-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem; /* Menší mezera */
+            padding: 0.5rem 0.75rem; /* Menší padding */
+            border-radius: 0.25rem; /* Zaoblené rohy */
+            background-color: #0d120a; /* Tmavší pozadí pro vnořené sekce */
+            border: 1px solid #1a2a1a; /* Jemný okraj */
+            border-left: none; /* Odstranit některé okraje pro čistší vzhled */
+            border-right: none;
+        }
+        .compact-section:first-of-type {
+            border-top: none; /* Bez horního okraje u prvního */
+        }
+        .compact-section-details {
+            flex-grow: 1;
+        }
+        .compact-section .btn-primary {
+            width: auto;
+            padding: 0.3rem 0.6rem; /* Velmi malé tlačítka */
+            font-size: 0.75rem;
+        }
+        .compact-section .text-xs {
+            font-size: 0.7rem; /* Ještě menší text */
+        }
+        .compact-section .text-sm {
+            font-size: 0.8rem; /* Menší text uvnitř sekcí */
+        }
+
+        /* Welcome Modal specific styles */
+        #welcome-modal {
+            position: fixed;
+            inset: 0;
+            background-color: #000000; /* Pure black background */
+            z-index: 1000; /* High z-index to cover everything */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            text-align: center;
+            animation: fadeIn 0.5s ease-out;
+            color: #d1ffb8;
+            font-size: 1.1rem;
+            line-height: 1.5;
+        }
+        /* This rule is crucial to ensure the modal hides correctly */
+        #welcome-modal.hidden {
+            display: none !important; 
+        }
+
+        #welcome-modal h2 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #79d70f;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 10px #79d70f; /* Neon glow */
+        }
+
+        #welcome-modal p {
+            max-width: 500px;
+            margin-bottom: 1rem; /* Smaller margin for multiple paragraphs */
+        }
+
+        #welcome-modal button {
+            background-color: #1a2a1a;
+            color: #d1ffb8;
+            padding: 0.75rem 2rem;
+            border-radius: 0.25rem;
+            font-weight: 700;
+            border: 1px solid #79d70f;
+            transition: background-color 0.1s, color 0.1s;
+            margin-top: 2rem; /* Margin for button after paragraphs */
+        }
+
+        #welcome-modal button:hover {
+            background-color: #79d70f;
+            color: #0d120a;
+        }
+
+        /* Initially hide game container until welcome modal is dismissed */
+        #game-container.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-300 flex justify-center items-center min-h-screen p-4">
+
+    <div id="grain-overlay"></div>
+
+    <!-- Welcome Modal -->
+    <div id="welcome-modal">
+        <h2>Vítej ve světě Dubina: Deluxe Edition! 🌆</h2>
+        <p>Tady nejde o fair play – jde o moc, peníze a respekt. Začínáš jako obyčejná Dubinská šepleť. Tvým cílem? Vybudovat drogové impérium, které ovládne město. Ale bacha – konkurence nespí a chyba tě může stát všechno.</p>
+        
+        <p><strong>Manuální operace:</strong></p>
+        <p>Začni tím, že klikneš na „Obrat babku“ – Každý člen gangu ti zvyšuje sílu gangu a potom dostáváš více z manuálních operací!</p>
+        
+        <p><strong>Byznys a operace:</strong></p>
+        <p>Investuj do skrýší jako garáže, motely nebo laboratoře. Každý nový Byznys ti přinese novou operaci, najímej poskoky do Byznysu a generuj příjem i když neklikáš.</p>
+
+        <button id="start-game-button">Začít hrát</button>
+    </div>
+
+    <div id="game-container" class="hidden"> <!-- Initially hidden -->
+        <!-- Panel s herními statistikami -->
+        <div class="bg-transparent p-4 text-center">
+            <div id="money-display" class="text-6xl font-bold text-green-400 mb-4">$0</div>
+            <div class="flex justify-center items-center gap-6 text-xl font-bold text-green-400">
+                <div class="text-center flex items-center">
+                    <i class="fas fa-clock mr-1 text-green-400"></i><span id="income-per-second-display">0/s</span>
+                </div>
+                <div class="text-center flex items-center">
+                    <i class="fas fa-dumbbell mr-1 text-green-400"></i><span id="predicted-click-yield-display">+1 Kč/klik | Obrat babku</span>
+                </div>
+            </div>
+            <div class="text-center text-green-400 text-xl mt-2">
+                Celková síla Gangu: <span id="total-bot-strength-display" class="font-bold text-green-400">1</span>
+            </div>
+        </div>
+
+        <!-- Sekce s tlačítkem operace a logem -->
+        <div class="bg-transparent px-4 pb-4 flex flex-col flex-grow">
+            <button id="click-button" class="btn-primary w-full text-2xl py-6 hover:scale-105 transform transition duration-200">
+                OBRAT BABKU
+            </button>
+            <p id="operation-description" class="text-center text-zinc-400 mt-2 text-sm italic"></p>
+            <div id="click-feedback" class="text-center text-lg font-bold mt-2 opacity-0 transition-opacity duration-500 ease-out"></div>
+
+            <div id="operation-log-container" class="flex flex-col flex-grow mt-2">
+                <div id="operation-log">
+                </div>
+            </div>
+        </div>
+
+        <!-- Záložky pro přepínání -->
+        <div class="flex justify-around border-b border-t border-green-600 mb-0 mt-0 overflow-x-auto">
+            <button class="tab-button btn-secondary active-tab" data-tab="ai-bots">
+                <i class="fas fa-users mr-1"></i> Gang
+            </button>
+            <button class="tab-button btn-secondary" data-tab="buildings">
+                <i class="fas fa-building mr-1"></i> Byznys & Operace
+            </button>
+            <button class="tab-button btn-secondary" data-tab="achievements">
+                <i class="fas fa-trophy mr-1"></i> Achievements
+            </button>
+        </div>
+
+        <!-- Obsah záložek -->
+        <div id="tab-content" class="flex-grow">
+            <!-- Obsah záložky Gang -->
+            <div id="ai-bots" class="tab-panel active">
+                <p id="gang-description" class="text-zinc-400 text-sm p-4 pt-2">
+                    Zde si najímáte členy gangu, kteří zvyšují vaši Celkovou sílu Gangu. Vyšší síla Gangu vám umožní provádět pokročilejší operace a získávat vyšší bonusy z manuálních kliknutí.
+                </p>
+                <div id="ai-bots-list">
+                    <!-- Členové Gangu budou vykresleni zde pomocí JS -->
+                </div>
+            </div>
+
+            <!-- Obsah záložky Byznys & Operace -->
+            <div id="buildings" class="tab-panel hidden">
+                <p id="business-description" class="text-zinc-400 text-sm p-4 pt-2">
+                    Zde nakupujete budovy, které odemykají nové operace a umožňují nábor zaměstnanců pro pasivní příjem. Výzkum operací vylepšuje váš manuální výnos.
+                </p>
+                <div id="buildings-list">
+                    <!-- Budovy budou vykresleny zde pomocí JS -->
+                </div>
+            </div>
+
+            <!-- Obsah záložky Achievements -->
+            <div id="achievements" class="tab-panel hidden">
+                <div id="achievements-list">
+                    <!-- Achievements budou vykresleny zde pomocí JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mini-game Modal -->
+    <div id="mini-game-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="bg-zinc-800 p-8 rounded-lg shadow-xl border border-lime-500 w-11/12 md:w-1/2 lg:w-1/3 text-center">
+            <h3 class="text-2xl font-bold text-lime-400 mb-4">Hack the System!</h3>
+            <p class="text-zinc-300 mb-4">Zadej kód co nejrychleji!</p>
+            <div id="code-display" class="bg-zinc-900 text-lime-300 font-mono text-xl p-4 rounded-md mb-4 select-all"></div>
+            <input type="text" id="code-input" class="w-full p-3 rounded-md bg-zinc-700 text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-lime-500 mb-4" autocomplete="off" spellcheck="false">
+            <div id="timer-display" class="text-lime-400 font-bold text-lg mb-4">Čas: 20.00s</div>
+            <button id="mini-game-start-button" class="btn-primary w-full mb-2">Start Hacking</button>
+            <button id="mini-game-cancel-button" class="btn-secondary w-full">Zrušit</button>
+            <div id="mini-game-feedback" class="text-lg font-bold mt-4"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Definice dat hry ---
+
+        // Definice všech typů operací
+        // Každá operace má základní výnos a vyžaduje určitou sílu botů
+        // Nyní obsahuje také vlastnosti pro výzkum: aktuální úroveň, cenu a bonus
+        const OPERATIONS_DEFINITIONS = [
+            { // New initial operation
+                name: "Obrat babku",
+                description: "Odchyt si babku a seber ji co ma. Nizke riziko, svet je tvuj!",
+                requiredStrength: 0,
+                baseClickYield: 1, // Same base as Prodat dávku for simplicity in initial display
+                initialResearchPrice: 0, // Not researchable
+                researchYieldMultiplier: 1.0, // Not researchable
+                outcomes: [
+                    { chance: 0.15, yieldMultiplier: 0.00, message: "Dostal jsi na prdel a šel jsi domů!" },
+                    { chance: 0.30, yieldMultiplier: 0.40, message: "Dostal jsi dvakrat holi pres zada, ale nemela sanci!" },
+                    { chance: 0.34, yieldMultiplier: 0.75, message: "Babka ti dala co měla.." },
+                    { chance: 0.06, yieldMultiplier: 1.50, message: "Babka tě omylem přeplatila!" },
+                    { chance: 0.15, yieldMultiplier: 2.50, message: "Babka si nesla domu cely ducho! bingo more!" }
+                ]
+            },
+            { // Moved "Prodat dávku" to index 1
+                name: "Prodat dávku",
+                description: "Rychlý pouliční kšeft za hotovost. Nízké riziko, nízký výnos.",
+                requiredStrength: 0,
+                baseClickYield: 1,
+                initialResearchPrice: 0,
+                researchYieldMultiplier: 1.10,
+                outcomes: [
+                    { chance: 0.10, yieldMultiplier: 0.00, message: "Dostal jsi přes hubu a okradli tě!" },
+                    { chance: 0.20, yieldMultiplier: 0.33, message: "Kupující smlouval, ale něco zůstalo." },
+                    { chance: 0.40, yieldMultiplier: 1.00, message: "Běžný prodej proběhl hladce." },
+                    { chance: 0.20, yieldMultiplier: 2.00, message: "Zákazník vzal víc než plánoval." },
+                    { chance: 0.10, yieldMultiplier: 3.33, message: "VIP klient tě přeplatil jako blázen!" }
+                ]
+            },
+            {
+                name: "Předat balíček",
+                description: "Předávka zákazníkovi z první várky směsi. Výroba i výdej ručně.",
+                requiredStrength: 20,
+                baseClickYield: 5,
+                initialResearchPrice: 500,
+                researchYieldMultiplier: 1.10,
+                outcomes: [
+                    { chance: 0.10, yieldMultiplier: 0.00, message: "Balíček někdo zadržel." },
+                    { chance: 0.20, yieldMultiplier: 0.43, message: "Předávka proběhla, ale ne bez ztrát." },
+                    { chance: 0.40, yieldMultiplier: 1.00, message: "Standardní výměna v klidu." },
+                    { chance: 0.20, yieldMultiplier: 2.14, message: "Předal jsi extra dávku, a zaplatili!" },
+                    { chance: 0.10, yieldMultiplier: 4.29, message: "Obchodní partner chtěl celou zásobu!" }
+                ]
+            },
+            {
+                name: "Distribuovat látku",
+                description: "Mobilní distribuce v různých čtvrtích, časté přesuny a vyšší dosah.",
+                requiredStrength: 100,
+                baseClickYield: 25,
+                initialResearchPrice: 2000,
+                researchYieldMultiplier: 1.10,
+                outcomes: [
+                    { chance: 0.10, yieldMultiplier: 0.00, message: "Polda tě stopl na cestě." },
+                    { chance: 0.20, yieldMultiplier: 0.40, message: "Ztráty při převozu – něco zbylo." },
+                    { chance: 0.40, yieldMultiplier: 1.00, message: "Zásilka dorazila bez problémů." },
+                    { chance: 0.20, yieldMultiplier: 2.00, message: "Koupili víc, než měli v úmyslu." },
+                    { chance: 0.10, yieldMultiplier: 4.00, message: "Zásilka šla přes velkoobchod, jackpot!" }
+                ]
+            },
+            {
+                name: "Zásobit lokální dealery", // New name for index 3
+                description: "Část zásilek mizí „v prádle“. Peníze se vrací čisté a bezpečné.",
+                requiredStrength: 500,
+                baseClickYield: 100,
+                initialResearchPrice: 10000,
+                researchYieldMultiplier: 1.10,
+                outcomes: [
+                    { chance: 0.10, yieldMultiplier: 0.00, message: "Jeden z dealerů tě zradil." },
+                    { chance: 0.20, yieldMultiplier: 0.70, message: "Pár lidí tě zklamalo, ale něco se prodalo." },
+                    { chance: 0.40, yieldMultiplier: 1.00, message: "Síť fungovala hladce." },
+                    { chance: 0.20, yieldMultiplier: 2.30, message: "Dealerská síť překvapila poptávkou." },
+                    { chance: 0.10, yieldMultiplier: 4.50, message: "Masivní výkup – nemohli se nabažit." }
+                ]
+            },
+            {
+                name: "Přepravit přes hranici", // New name for index 4
+                description: "Kvalitní sklizeň se rychle prodává místním dealerům. Stálý výnos.",
+                requiredStrength: 2500,
+                baseClickYield: 400,
+                initialResearchPrice: 50000,
+                researchYieldMultiplier: 1.10,
+                outcomes: [
+                    { chance: 0.10, yieldMultiplier: 0.00, message: "Celníci tě načapali." },
+                    { chance: 0.20, yieldMultiplier: 0.50, message: "Ztráty na hranici, ale něco prošlo." },
+                    { chance: 0.40, yieldMultiplier: 1.00, message: "Průjezd úspěšný, nikdo si ničeho nevšiml." },
+                    { chance: 0.20, yieldMultiplier: 2.50, message: "Prošels to s pomocí kontaktu." },
+                    { chance: 0.10, yieldMultiplier: 5.00, message: "Letadlem jsi to dostal až k prezidentovi." }
+                ]
+            },
+            {
+                name: "Zásobit noční klub", // New name for index 5
+                description: "Výroba čisté syntetiky a její distribuce do města skrze síť kurýrů.",
+                requiredStrength: 12000,
+                baseClickYield: 1500,
+                initialResearchPrice: 250000,
+                researchYieldMultiplier: 1.10,
+                outcomes: [
+                    { chance: 0.10, yieldMultiplier: 0.00, message: "Majitel klubu tě podrazil." },
+                    { chance: 0.20, yieldMultiplier: 0.60, message: "Prodali, ale nebyla sobota." },
+                    { chance: 0.40, yieldMultiplier: 1.00, message: "Páteční večer, dobrý obrat." },
+                    { chance: 0.20, yieldMultiplier: 2.50, message: "Zásilka padla na hlavní akci měsíce." },
+                    { chance: 0.10, yieldMultiplier: 6.00, message: "Zásoboval jsi festival, šílené zisky!" }
+                ]
+            },
+            {
+                name: "Prodávat novou směs", // Renamed operation
+                description: "Připravené zásilky se předávají velkým odběratelům. Vysoký obrat.",
+                requiredStrength: 60000,
+                baseClickYield: 6000,
+                initialResearchPrice: 1000000,
+                researchYieldMultiplier: 1.10,
+                outcomes: [
+                    { chance: 0.10, yieldMultiplier: 0.00, message: "Test dopadl tragicky, ztráta." },
+                    { chance: 0.20, yieldMultiplier: 0.30, message: "Slabá odezva, neuchytilo se." },
+                    { chance: 0.40, yieldMultiplier: 1.00, message: "Funguje to, základní poptávka vytvořena." },
+                    { chance: 0.20, yieldMultiplier: 2.00, message: "Hit u menších skupin, hype stoupá." },
+                    { chance: 0.10, yieldMultiplier: 4.00, message: "Zázračná směs – totální šílenství!" }
+                ]
+            },
+            {
+                name: "Připravit dávku pro export", // New name for index 7
+                description: "Balíčky mizí v kufrech turistů. Čistý export mimo město.",
+                requiredStrength: 250000,
+                baseClickYield: 24000,
+                initialResearchPrice: 5000000,
+                researchYieldMultiplier: 1.10,
+                outcomes: [
+                    { chance: 0.10, yieldMultiplier: 0.00, message: "Laboratoř vybuchla, špatné složení." },
+                    { chance: 0.20, yieldMultiplier: 0.50, message: "Zásilka neprošla kvalitou." },
+                    { chance: 0.40, yieldMultiplier: 1.00, message: "Standardní dávka připravená." },
+                    { chance: 0.20, yieldMultiplier: 2.00, message: "Speciální objednávka pro velký trh." },
+                    { chance: 0.10, yieldMultiplier: 5.00, message: "Prémiová dávka pro zahraniční mafii!" }
+                ]
+            },
+            {
+                name: "Uzavřít digitální obchod", // New name for index 8
+                description: "Distribuce velkých objemů s ochranou, rychlá obrátka.",
+                requiredStrength: 1000000,
+                baseClickYield: 100000,
+                initialResearchPrice: 25000000,
+                researchYieldMultiplier: 1.10,
+                outcomes: [
+                    { chance: 0.10, yieldMultiplier: 0.00, message: "Scam – klient zmizel." },
+                    { chance: 0.20, yieldMultiplier: 0.60, message: "Menší převod, klient byl opatrný." },
+                    { chance: 0.40, yieldMultiplier: 1.00, message: "Prodej přes darknet úspěšný." },
+                    { chance: 0.20, yieldMultiplier: 2.50, message: "Obchodní síť tě doporučila dál." },
+                    { chance: 0.10, yieldMultiplier: 6.00, message: "Viral hit – prodal jsi celému fóru!" }
+                ]
+            },
+            {
+                name: "Zásilka pro syndikát", // New name for index 9
+                description: "Výroba a rozesílka přes kontakty v celém státě. Obrovské výnosy.",
+                requiredStrength: 4000000,
+                baseClickYield: 400000,
+                initialResearchPrice: 100000000,
+                researchYieldMultiplier: 1.10,
+                outcomes: [
+                    { chance: 0.10, yieldMultiplier: 0.00, message: "Syndikát tě zaškrtnul – chyba!" },
+                    { chance: 0.20, yieldMultiplier: 0.40, message: "Podhodnotili zásilku, část odmítli." },
+                    { chance: 0.40, yieldMultiplier: 1.00, message: "Zakázka dorazila dle očekávání." },
+                    { chance: 0.20, yieldMultiplier: 3.00, message: "Vysoký rating, vzali víc." },
+                    { chance: 0.10, yieldMultiplier: 7.00, message: "Odměna za loajalitu – odkup celého skladu!" }
+                ]
+            }
+        ];
+
+        // Definice všech typů Internet Bandwidth (nyní Gang members)
+        // Každý typ má atribut síly gangu
+        const AI_BOT_DEFINITIONS = [ // Changed context to Gang members in comments
+            { name: "Běžec s batohem", operationIndex: 1, initialPrice: 10, clickYieldIncrease: 1, strength: 1 }, // operationIndex shifted to 1
+            { name: "Návazná linka", operationIndex: 2, initialPrice: 400, clickYieldIncrease: 5, strength: 5 }, // operationIndex shifted
+            { name: "Ruční balička", operationIndex: 3, initialPrice: 8000, clickYieldIncrease: 25, strength: 25 }, // operationIndex shifted
+            { name: "Kurýr na motorce", operationIndex: 4, initialPrice: 150000, clickYieldIncrease: 100, strength: 100 }, // operationIndex shifted
+            { name: "Logistický Expert", operationIndex: 5, initialPrice: 3000000, clickYieldIncrease: 400, strength: 400 }, // Renamed from Rychlý mixér, operationIndex shifted
+            { name: "Pouliční síť", operationIndex: 6, initialPrice: 60000000, clickYieldIncrease: 1500, strength: 1500 }, // operationIndex shifted
+            { name: "Dávkovač", operationIndex: 7, initialPrice: 1200000000, clickYieldIncrease: 6000, strength: 6000 }, // operationIndex shifted
+            { name: "Turbo rozvoz", operationIndex: 8, initialPrice: 25000000000, clickYieldIncrease: 24000, strength: 24000 }, // operationIndex shifted
+            { name: "Automatický dispenser", operationIndex: 9, initialPrice: 500000000000, clickYieldIncrease: 100000, strength: 100000 }, // operationIndex shifted
+            { name: "Pokročilá výroba", operationIndex: 10, initialPrice: 10000000000000, clickYieldIncrease: 400000, strength: 400000 } // operationIndex shifted (index 10 for consistency)
+        ];
+
+        // Definice Budovy, které odemykají operace a zaměstnance
+        const BUILDING_DEFINITIONS = [
+            { id: "bytNaDubine", name: "Byt na Dubině", price: 50, unlockedOperationIndex: 1, employeeName: "Pouliční dealer", employeeInitialYield: 1, employeeInitialPrice: 25 }, // unlockedOperationIndex shifted to 1
+            { id: "dilnaPodzemi", name: "Dílna v podzemí", price: 250, unlockedOperationIndex: 2, employeeName: "Míchač látek", employeeInitialYield: 5, employeeInitialPrice: 100 }, // unlockedOperationIndex shifted
+            { id: "karavan", name: "Karavan", price: 1500, unlockedOperationIndex: 3, employeeName: "Balič", employeeInitialYield: 25, employeeInitialPrice: 500 }, // unlockedOperationIndex shifted
+            { id: "skladPristavu", name: "Sklad v přístavu", price: 9000, unlockedOperationIndex: 4, employeeName: "Kurýr", employeeInitialYield: 100, employeeInitialPrice: 2000 }, // unlockedOperationIndex shifted
+            { id: "pradelna", name: "Prádelna", price: 45000, unlockedOperationIndex: 5, employeeName: "Ochranka", employeeInitialYield: 400, employeeInitialPrice: 8000 }, // unlockedOperationIndex shifted
+            { id: "zchradlyMotel", name: "Zchátralý motel", price: 180000, unlockedOperationIndex: 6, employeeName: "Distribuční expert", employeeInitialYield: 1500, employeeInitialPrice: 30000 }, // unlockedOperationIndex shifted
+            { id: "sklenikHorach", name: "Skleník v horách", price: 900000, unlockedOperationIndex: 7, employeeName: "Tichý chemik", employeeInitialYield: 6000, employeeInitialPrice: 120000 }, // unlockedOperationIndex shifted
+            { id: "chemickaLaborator", name: "Chemická laboratoř", price: 4500000, unlockedOperationIndex: 8, employeeName: "Supervisior dílny", employeeInitialYield: 24000, employeeInitialPrice: 480000 }, // unlockedOperationIndex shifted
+            { id: "opancerovanySklad", name: "Opancéřovaný sklad", price: 18000000, unlockedOperationIndex: 9, employeeName: "Čistič stop", employeeInitialYield: 100000, employeeInitialPrice: 2000000 }, // unlockedOperationIndex shifted
+            { id: "megaFarma", name: "Mega farma", price: 100000000, unlockedOperationIndex: 10, employeeName: "Koordinátor dodávky", employeeInitialYield: 400000, employeeInitialPrice: 8000000 } // unlockedOperationIndex shifted (index 10)
+        ];
+
+        // Definice bonusů efektivity pro zaměstnance
+        // Bonusy jsou nyní 100% (tj. 1.0) při dosažení konkrétních počtů
+        const EMPLOYEE_EFFICIENCY_BONUSES = [
+            { count: 5, bonus: 1.00 }, // 100 % bonus při 5 zaměstnancích
+            { count: 25, bonus: 1.00 }, // 100 % bonus při 25 zaměstnancích
+            { count: 100, bonus: 1.00 } // 100 % bonus při 100 zaměstnancích
+        ];
+
+        // Definice achievementů s odměnami
+        const ACHIEVEMENTS_DEFINITIONS = [
+            { id: 'click20', description: "Klikni 20x", check: (state) => state.totalClicks >= 20, reward: 50 },
+            { id: 'buy1Runner', description: "Kup 1 Běžec s batohem", check: (state) => state.aiBots[0].count >= 1, reward: 100 },
+            { id: 'buy10Runners', description: "Kup 10 Běžců s batohem", check: (state) => state.aiBots[0].count >= 10, reward: 500 },
+            { id: 'buyFirstBuilding', description: "Kup Byt na Dubině", check: (state) => state.buildings[0].isBought, reward: 1000 }, // Updated name
+            { id: 'buy1StreetDealer', description: "Kup 1 zaměstnance (Pouliční dealer)", check: (state) => state.buildings[0].employeeCount >= 1, reward: 200 },
+            { id: 'buy25StreetDealers', description: "Kup 25 Pouličních dealerů (bonus efektivity)", check: (state) => gameState.buildings[0].employeeCount >= 25, reward: 2000 },
+            { id: 'buySecondBuilding', description: "Kup Dílna v podzemí", check: (state) => state.buildings[1].isBought, reward: 5000 },
+            { id: 'buy1FollowUpLine', description: "Kup 1 Návazná linka", check: (state) => state.aiBots[1].count >= 1, reward: 1000 },
+            { id: 'buy50StreetDealers', description: "Kup 50 Pouličních dealerů", check: (state) => gameState.buildings[0].employeeCount >= 50, reward: 4000 },
+            { id: 'buy10Mixers', description: "Kup 10 Míchačů látek", check: (state) => state.buildings[1].employeeCount >= 10, reward: 3000 },
+            { id: 'buyThirdBuilding', description: "Kup Karavan", check: (state) => state.buildings[2].isBought, reward: 10000 },
+            { id: 'buy100StreetDealers', description: "Kup 100 Pouličních dealerů", check: (state) => gameState.buildings[0].employeeCount >= 100, reward: 8000 },
+            { id: 'buy25Mixers', description: "Kup 25 Míchačů látek", check: (state) => state.buildings[1].employeeCount >= 25, reward: 7000 },
+            { id: 'buyFourthBuilding', description: "Kup Sklad v přístavu", check: (state) => state.buildings[3].isBought, reward: 20000 },
+            { id: 'buy5ManualPackers', description: "Kup 5 Ručních baliček", check: (state) => state.aiBots[2].count >= 5, reward: 15000 },
+            { id: 'buy50Packers', description: "Kup 50 Baličů", check: (state) => state.buildings[2].employeeCount >= 50, reward: 18000 },
+            { id: 'buyFifthBuilding', description: "Kup Prádelna", check: (state) => state.buildings[4].isBought, reward: 50000 },
+            { id: 'buy100Packers', description: "Kup 100 Baličů", check: (state) => state.buildings[2].employeeCount >= 100, reward: 40000 },
+            { id: 'buySixthBuilding', description: "Kup Zchátralý motel", check: (state) => state.buildings[5].isBought, reward: 100000 },
+            { id: 'completeMegaFarma', description: "Kup Mega farma", check: (state) => state.buildings[9].isBought, reward: 1000000 }
+        ];
+
+        // --- Stav hry ---
+        let gameState = {
+            money: 0, // Aktuální peníze hráče
+            totalClicks: 0, // Celkový počet manuálních kliknutí
+            activeOperationIndex: 0, // Index aktuálně aktivní operace (začíná na "Obrat babku")
+            // Mapa operací s informací, zda jsou odemčeny a jejich aktuální stav výzkumu
+            operations: OPERATIONS_DEFINITIONS.map((op, index) => ({
+                ...op,
+                // Obrat babku (index 0) je odemčená na začátku, ostatní ne
+                unlocked: index === 0, 
+                currentResearchLevel: 0, // Počáteční úroveň výzkumu pro každou operaci
+                currentResearchPrice: op.initialResearchPrice, // Aktuální cena výzkumu pro tuto operaci
+                currentBaseClickYield: op.baseClickYield // Aktuální základní výnos, ovlivněný výzkumem
+            })),
+            // Mapa členů Gangu s počtem, aktuální cenou a základními definicemi
+            aiBots: AI_BOT_DEFINITIONS.map(bot => ({ ...bot, count: 0, currentPrice: bot.initialPrice })),
+            // Mapa Budovy
+            buildings: BUILDING_DEFINITIONS.map((building, index) => ({
+                ...building,
+                isBought: false, // Zda byla budova zakoupena
+                employeeCount: 0, // Počet najatých zaměstnanců
+                employeeCurrentPrice: building.employeeInitialPrice, // Aktuální cena pro najmutí dalšího zaměstnance
+                employeeTotalYield: 0, // Celkový výnos od zaměstnanců (dynamicky počítáno)
+                availableToBuy: index === 0, // Jen první budova je na začátku k dispozici k nákupu
+                strengthBonus: 0 // Síla přidaná po zakoupení budovy
+            })),
+            // Mapa achievementů s informací, zda byly splněny a zda byla odměna vybrána
+            achievements: ACHIEVEMENTS_DEFINITIONS.map(a => ({ ...a, completed: false, rewardClaimed: false })),
+            totalBotStrength: 1, // Celková síla Gangu (včetně bonusů z vyzkoumaných operací/budov) - Základní hodnota 1
+            operationLog: [], // Log posledních operací
+            gameOver: false, // Zda hra skončila
+            // Nové flagy pro trvalé odemčení záložek
+            isGangTabUnlocked: false,
+            isBusinessTabUnlocked: false,
+            isAchievementsTabUnlocked: false
+        };
+
+        // --- DOM Elementy ---
+        const moneyDisplay = document.getElementById('money-display');
+        const incomePerSecondDisplay = document.getElementById('income-per-second-display');
+        const predictedClickYieldDisplay = document.getElementById('predicted-click-yield-display'); // Renamed element
+        const totalBotStrengthDisplay = document.getElementById('total-bot-strength-display'); // Corrected typo
+        const clickButton = document.getElementById('click-button');
+        const operationDescriptionDisplay = document.getElementById('operation-description'); // Added for operation description
+        const aiBotsList = document.getElementById('ai-bots-list');
+        const buildingsList = document.getElementById('buildings-list');
+        const achievementsList = document.getElementById('achievements-list');
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabPanels = document.querySelectorAll('.tab-panel');
+        const clickFeedbackDisplay = document.getElementById('click-feedback');
+        const operationLogElement = document.getElementById('operation-log');
+        const welcomeModal = document.getElementById('welcome-modal'); // New: Welcome Modal
+        const startGameButton = document.getElementById('start-game-button'); // New: Start Game Button
+        const gameContainer = document.getElementById('game-container'); // New: Game Container
+
+        // Mini-game DOM elementy
+        const miniGameModal = document.getElementById('mini-game-modal');
+        const codeDisplay = document.getElementById('code-display');
+        const codeInput = document.getElementById('code-input');
+        const timerDisplay = document.getElementById('timer-display');
+        const miniGameStartButton = document.getElementById('mini-game-start-button');
+        const miniGameCancelButton = document.getElementById('mini-game-cancel-button');
+        const miniGameFeedback = document.getElementById('mini-game-feedback'); 
+
+        // Mini-game state variables
+        let currentResearchOperationIndex = -1; // Store the index of the operation currently being researched
+        const MINI_GAME_CODE = "Odhlasovani z verejnych prostor"; // Fixed text for mini-game
+        let miniGameCode = MINI_GAME_CODE; // Initialize with the fixed code
+        let miniGameTimer;
+        let miniGameTimeRemaining = 20; // seconds
+        const MINI_GAME_DURATION = 20; // seconds
+
+        // --- Pomocné funkce ---
+
+        /**
+         * Formátuje číslo jako měnu, přidává zkratky (K, M, B, T atd.) a používá "Kč".
+         * @param {number} amount Částka k formátování.
+         * @returns {string} Zformátovaný řetězec měny.
+         */
+        function formatCurrency(amount) {
+            // Handle zero explicitly
+            if (amount === 0) return `0 Kč`;
+            // Handle positive amounts less than 1, showing as "1 Kč"
+            if (amount > 0 && amount < 1) return `1 Kč`;
+
+            const absoluteAmount = Math.abs(amount); // Use absolute value for formatting numbers
+            
+            // Format large numbers with abbreviations
+            if (absoluteAmount < 1000) return `${Math.round(absoluteAmount)} Kč`;
+            
+            const units = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"];
+            const tier = Math.floor(Math.log10(absoluteAmount) / 3);
+            const scaled = absoluteAmount / Math.pow(1000, tier);
+            
+            return `${scaled.toFixed(1)} ${units[tier]}Kč`;
+        }
+
+
+        /**
+         * Generuje SVG ikony hlavy na základě počtu, inspirováno římskými číslicemi.
+         * Použito pro členy Gangu i zaměstnance.
+         * @param {number} count Počet entit (členů gangu/zaměstnanců).
+         * @returns {string} HTML řetězec s ikonami hlav.
+         */
+        function getHeadIcon(count) {
+            const svgBase = `<svg class="bot-head-icon {color}" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.38 0 2.5 1.12 2.5 2.5S13.38 10 12 10 9.5 8.88 9.5 7.5 10.62 5 12 5zm-3.5 6h7c.83 0 1.5.67 1.5 1.5v3.5h-10V12.5c0-.83.67-1.5 1.5-1.5z"/></svg>`;
+            let icons = '';
+            let remainingCount = count;
+
+            // Prioritní přidávání ikon od největších hodnot
+            const iconMap = [
+                { value: 100, color: 'purple' },
+                { value: 25, color: 'blue' },
+                { value: 5, color: 'green' },
+                { value: 1, color: 'white' }
+            ];
+
+            for (const { value, color } of iconMap) {
+                while (remainingCount >= value) {
+                    icons += svgBase.replace('{color}', color);
+                    remainingCount -= value;
+                }
+            }
+            return icons;
+        }
+
+        /**
+         * Vypočítá celkovou sílu Gangu všech zakoupených členů Gangu a bonusů z koupených budov.
+         * @returns {number} Celková síla Gangu.
+         */
+        function calculateTotalBandwidth() { // Renamed internally to reflect 'Síla Gangu'
+            let strengthFromBots = gameState.aiBots.reduce((sum, bot) => sum + (bot.count * bot.strength), 0);
+            let strengthFromBuildings = gameState.buildings.reduce((sum, building) => sum + building.strengthBonus, 0);
+            return strengthFromBots + strengthFromBuildings + 1; // Add base 1 for Celková síla Gangu
+        }
+
+        /**
+         * Vypočítá celkový výnos za jedno manuální kliknutí pro aktivní operaci (základní, před aplikací náhody).
+         * Tato funkce je primárně pro zobrazení "Výnos/klik" v UI.
+         * @returns {number} Celkový základní příjem za jedno manuální kliknutí.
+         */
+        function calculateClickYield() {
+            const activeOp = gameState.operations[gameState.activeOperationIndex];
+            const hasEnoughBandwidth = gameState.totalBotStrength >= activeOp.requiredStrength;
+
+            let currentYield = activeOp.currentBaseClickYield;
+
+            if (hasEnoughBandwidth) {
+                gameState.aiBots.forEach(bot => {
+                    // Check if bot's operation index matches active operation index
+                    // This ensures bot yield is only added if compatible with the currently selected manual operation
+                    // if (bot.operationIndex === gameState.activeOperationIndex) { // Removed this condition as per user's earlier request that AI bots scale all manual operations by strength
+                        currentYield += bot.count * bot.clickYieldIncrease;
+                    // }
+                });
+            }
+            return currentYield;
+        }
+
+        /**
+         * Vypočítá celkový pasivní příjem za sekundu od zaměstnanců.
+         * @returns {number} Celkový pasivní příjem za sekundu.
+         */
+        function calculatePassiveIncome() {
+            let totalIncome = 0;
+
+            // Příjem od zaměstnanců (vázaných na zakoupené budovy)
+            gameState.buildings.forEach(building => {
+                if (building.isBought && building.employeeCount > 0) {
+                    let efficiencyBonusMultiplier = 1; // Start with 1 (no bonus)
+                    // Najde nejvyšší dosažený bonus efektivity
+                    for (const bonus of EMPLOYEE_EFFICIENCY_BONUSES) {
+                        if (building.employeeCount >= bonus.count) {
+                            efficiencyBonusMultiplier = (1 + bonus.bonus); // Přidá 100% bonus (tj. * 2)
+                        }
+                    }
+                    totalIncome += building.employeeCount * building.employeeInitialYield * efficiencyBonusMultiplier;
+                }
+            });
+
+            return totalIncome;
+        }
+
+        /**
+         * Aktualizuje všechny UI elementy s aktuálním stavem hry.
+         */
+        function updateUI() {
+            gameState.totalBotStrength = calculateTotalBandwidth(); // Aktualizuje celkovou sílu Gangu
+            moneyDisplay.textContent = formatCurrency(gameState.money);
+            incomePerSecondDisplay.textContent = `+${formatCurrency(calculatePassiveIncome())}/s`;
+            // Display predicted click yield and active operation name
+            predictedClickYieldDisplay.textContent = `+${formatCurrency(calculateClickYield())}/klik | ${gameState.operations[gameState.activeOperationIndex].name}`; // Changed / to |
+            totalBotStrengthDisplay.textContent = gameState.totalBotStrength; // Display Celková síla Gangu
+
+            // Automaticky nastaví nejpokročilejší odemčenou operaci jako aktivní
+            let highestUnlockedOpIndex = 0;
+            for (let i = gameState.operations.length - 1; i >= 0; i--) {
+                if (gameState.operations[i].unlocked) {
+                    highestUnlockedOpIndex = i;
+                    break;
+                }
+            }
+            gameState.activeOperationIndex = highestUnlockedOpIndex;
+            const activeOp = gameState.operations[gameState.activeOperationIndex];
+            clickButton.textContent = activeOp.name.toUpperCase(); // Text tlačítka velkými písmeny
+            operationDescriptionDisplay.textContent = activeOp.description; // Display operation description
+
+            renderAIBots(); // Vykreslí seznam členů Gangu
+            renderBuildings(); // Vykreslí seznam budov
+            checkAchievements(); // Zkontroluje splnění achievementů PŘED vykreslením
+            renderAchievements(); // Vykreslí seznam achievementů
+            renderOperationLog(); // Vykreslí log operací
+            updateTabStates(); // Aktualizace stavu záložek
+        }
+
+        /**
+         * Zpracuje událost manuálního kliknutí.
+         */
+        function handleClick() {
+            if (gameState.gameOver) return;
+            gameState.totalClicks++;
+
+            const activeOp = gameState.operations[gameState.activeOperationIndex];
+            const hasEnoughBandwidth = gameState.totalBotStrength >= activeOp.requiredStrength;
+
+            // Calculate the base yield before applying random outcome multiplier
+            let baseYield = activeOp.currentBaseClickYield; // Initialized baseYield
+            if (hasEnoughBandwidth) {
+                gameState.aiBots.forEach(bot => {
+                    baseYield += bot.count * bot.clickYieldIncrease; // Correctly add to baseYield
+                });
+            }
+
+            // Determine the outcome based on chances
+            const rand = Math.random(); // Generates a random number between 0 (inclusive) and 1 (exclusive)
+            let cumulativeChance = 0;
+            let chosenOutcome = null;
+
+            // Iterate through outcomes to find which one applies
+            for (const outcome of activeOp.outcomes) {
+                cumulativeChance += outcome.chance;
+                if (rand < cumulativeChance) {
+                    chosenOutcome = outcome;
+                    break;
+                }
+            }
+
+            // If no outcome was chosen (shouldn't happen if chances sum to 1.0), default to 100% yield
+            if (!chosenOutcome) {
+                chosenOutcome = { yieldMultiplier: 1.00, message: "Neznámý výsledek operace.", chance: 1.00 }; // Ensure chance is defined for safety
+            }
+
+            // Apply the yield multiplier from the chosen outcome
+            let finalYield = baseYield * chosenOutcome.yieldMultiplier;
+
+            // Ensure any positive yield is at least 1, but 0 remains 0 for failures
+            if (chosenOutcome.yieldMultiplier > 0 && finalYield > 0 && finalYield < 1) { // Added finalYield > 0 to ensure it's not a true 0
+                finalYield = 1;
+            } else {
+                finalYield = Math.floor(finalYield); // Apply floor for yields >= 1 or 0
+            }
+
+            gameState.money += finalYield;
+
+            // Add to operation log as an object
+            gameState.operationLog.push({
+                type: 'action',
+                message: chosenOutcome.message,
+                amount: finalYield,
+                isLoss: chosenOutcome.yieldMultiplier === 0
+            });
+            
+            if (gameState.operationLog.length > 10) {
+                gameState.operationLog.shift();
+            }
+
+            // Display click feedback
+            let feedbackText = `${formatCurrency(finalYield)}`;
+            clickFeedbackDisplay.textContent = feedbackText;
+            clickFeedbackDisplay.style.color = chosenOutcome.yieldMultiplier > 0 ? '#4ade80' : '#ef4444'; // Green for gain, Red for loss
+            clickFeedbackDisplay.style.opacity = '1';
+            setTimeout(() => {
+                clickFeedbackDisplay.style.opacity = '0';
+            }, 700);
+
+            updateUI();
+        }
+
+        /**
+         * Updates the disabled state of tab buttons based on game conditions.
+         */
+        function updateTabStates() {
+            // Gang tab (index 0)
+            const gangTabButton = tabButtons[0];
+            // If already unlocked, keep it unlocked
+            if (!gameState.isGangTabUnlocked) {
+                if (gameState.money >= 10) {
+                    gameState.isGangTabUnlocked = true;
+                }
+            }
+            gangTabButton.disabled = !gameState.isGangTabUnlocked;
+
+            // Byznys & Operace tab (index 1)
+            const businessTabButton = tabButtons[1];
+            // If already unlocked, keep it unlocked
+            if (!gameState.isBusinessTabUnlocked) {
+                // Now only checks money >= 10
+                if (gameState.money >= 10) {
+                    gameState.isBusinessTabUnlocked = true;
+                }
+            }
+            businessTabButton.disabled = !gameState.isBusinessTabUnlocked;
+
+            // Achievements tab (index 2)
+            const achievementsTabButton = tabButtons[2];
+            // If already unlocked, keep it unlocked
+            if (!gameState.isAchievementsTabUnlocked) {
+                // Check if the first achievement (index 0, 'click20') is completed
+                if (gameState.achievements[0].completed) {
+                    gameState.isAchievementsTabUnlocked = true;
+                }
+            }
+            achievementsTabButton.disabled = !gameState.isAchievementsTabUnlocked;
+
+            // Logic to switch active tab if current active becomes disabled
+            let activeTabElement = document.querySelector('.tab-button.active-tab');
+            let activeTabPanelElement = activeTabElement ? document.getElementById(activeTabElement.dataset.tab) : null;
+
+            if (!activeTabElement || activeTabElement.disabled) { // If no active tab or current active tab is disabled
+                // First, hide all panels
+                tabPanels.forEach(panel => panel.classList.add('hidden'));
+                tabButtons.forEach(btn => btn.classList.remove('active-tab'));
+
+                // Find the first non-disabled tab and activate it
+                let newActiveTabFound = false;
+                for (let i = 0; i < tabButtons.length; i++) {
+                    if (!tabButtons[i].disabled) {
+                        tabButtons[i].classList.add('active-tab');
+                        document.getElementById(tabButtons[i].dataset.tab).classList.remove('hidden');
+                        newActiveTabFound = true;
+                        break;
+                    }
+                }
+                // If no non-disabled tab is found, default to the first tab (even if disabled) and show its content
+                if (!newActiveTabFound && tabButtons.length > 0) {
+                    tabButtons[0].classList.add('active-tab');
+                    document.getElementById(tabButtons[0].dataset.tab).classList.remove('hidden');
+                }
+            } else {
+                // If there's already an active and enabled tab, ensure its content is shown
+                activeTabPanelElement.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Vykreslí seznam členů Gangu do UI.
+         */
+        function renderAIBots() {
+            aiBotsList.innerHTML = '';
+            let nextUnboughtBotDisplayed = false;
+
+            gameState.aiBots.forEach((bot, index) => {
+                const isBought = bot.count > 0;
+                const isOperationUnlocked = gameState.operations[bot.operationIndex].unlocked;
+                const canBuy = gameState.money >= bot.currentPrice && isOperationUnlocked;
+
+                // Display if bought OR if it's the next unbought bot in sequence
+                // nextUnboughtBotDisplayed ensures only ONE unbought bot is shown at a time
+                const shouldDisplay = isBought || (!nextUnboughtBotDisplayed && !isBought);
+                
+                if (shouldDisplay) {
+                    const botElement = document.createElement('div');
+                    botElement.className = 'item-card';
+                    botElement.innerHTML = `
+                        <div class="item-card-details">
+                            <div class="item-card-title">
+                                <span>${bot.name} (${bot.count}) ${getHeadIcon(bot.count)}</span>
+                                <span class="price">${formatCurrency(bot.currentPrice)}</span>
+                            </div>
+                            <div class="item-card-stats">
+                                Síla Gangu: +${bot.strength}
+                                ${!isOperationUnlocked ? `<br><span class="text-red-400"> (Odemkne se s "${OPERATIONS_DEFINITIONS[bot.operationIndex].name}")</span>` : ''}
+                            </div>
+                        </div>
+                        <button class="btn-primary buy-ai-bot" data-index="${index}" ${!canBuy ? 'disabled' : ''}>Koupit</button>
+                    `;
+                    aiBotsList.appendChild(botElement);
+
+                    if (!isBought) { // If this bot is not bought, it means it's the next unbought one we just displayed
+                        nextUnboughtBotDisplayed = true;
+                    }
+                }
+            });
+
+            document.querySelectorAll('.buy-ai-bot').forEach(button => {
+                button.onclick = (event) => buyAIBot(parseInt(event.target.dataset.index));
+            });
+        }
+
+        /**
+         * Koupí člena Gangu.
+         * @param {number} index Index typu člena Gangu, který se má koupit.
+         */
+        function buyAIBot(index) {
+            if (gameState.gameOver) return;
+            const bot = gameState.aiBots[index];
+            const isOperationUnlocked = gameState.operations[bot.operationIndex].unlocked;
+
+            if (gameState.money >= bot.currentPrice && isOperationUnlocked) {
+                gameState.money -= bot.currentPrice;
+                bot.count++;
+                
+                gameState.operationLog.push({
+                    type: 'gang',
+                    message: `Koupen ${bot.name} (celkem ${bot.count}).`,
+                    amount: -Math.round(bot.currentPrice / 1.15), // Log original price for consistency, now negative
+                    isLoss: false // This refers to action outcome loss, not financial loss
+                });
+                
+                bot.currentPrice *= 1.15;
+                updateUI();
+            }
+        }
+
+        /**
+         * Vykreslí seznam budov do UI.
+         */
+        function renderBuildings() {
+            buildingsList.innerHTML = '';
+            let nextUnboughtBuildingDisplayed = false;
+
+            gameState.buildings.forEach((building, index) => {
+                const isBought = building.isBought;
+                const isNextAvailableInSequence = (index === 0 && !building.isBought) || (index > 0 && gameState.buildings[index - 1].isBought && !building.isBought);
+                const canBuy = gameState.money >= building.price && isNextAvailableInSequence;
+
+                // Display if bought OR if it's the next unbought building in sequence
+                const shouldDisplay = isBought || (!nextUnboughtBuildingDisplayed && !isBought);
+                
+                if (shouldDisplay) {
+                    const buildingElement = document.createElement('div');
+                    buildingElement.className = 'item-card';
+
+                    if (!isBought) {
+                        // Conditionally display operation info for buildings (not for the first one)
+                        const associatedOperation = OPERATIONS_DEFINITIONS[building.unlockedOperationIndex];
+                        const predictedOperationYield = associatedOperation.baseClickYield;
+                        const operationInfo = 
+                            `<br>Nová Operace: "${associatedOperation.name}" (Zisk/klik: ${formatCurrency(predictedOperationYield)})`; // Changed to Nová Operace, always display
+
+                        buildingElement.innerHTML = `
+                            <div class="item-card-details">
+                                <div class="item-card-title">
+                                    <span>${building.name}</span>
+                                    <span class="price">${formatCurrency(building.price)}</span>
+                                </div>
+                                <div class="item-card-stats">
+                                    Výnos zaměstnance: ${formatCurrency(building.employeeInitialYield)}/ks
+                                    ${operationInfo}
+                                    ${!isNextAvailableInSequence && index > 0 ? `<br><span class="text-red-400"> (Odemkne se po koupi ${gameState.buildings[index - 1].name})</span>` : ''}
+                                </div>
+                            </div>
+                            <button class="btn-primary buy-building" data-index="${index}" ${!canBuy ? 'disabled' : ''}>Koupit</button>
+                        `;
+                    } else {
+                        const unlockedOperation = gameState.operations[building.unlockedOperationIndex];
+                        let currentEfficiencyBonusPercentage = 0;
+                        for (const bonus of EMPLOYEE_EFFICIENCY_BONUSES) {
+                            if (building.employeeCount >= bonus.count) {
+                                currentEfficiencyBonusPercentage = bonus.bonus * 100;
+                            }
+                        }
+
+                        const canHire = gameState.money >= building.employeeCurrentPrice && building.employeeCount < 100;
+                        const individualYield = building.employeeInitialYield * (1 + (currentEfficiencyBonusPercentage / 100));
+
+                        let nextBonusTeaser = '';
+                        let nextBonusCount = -1;
+                        for (const bonusTier of EMPLOYEE_EFFICIENCY_BONUSES) {
+                            if (building.employeeCount < bonusTier.count) {
+                                nextBonusCount = bonusTier.count;
+                                break;
+                            }
+                        }
+
+                        if (nextBonusCount !== -1) {
+                            const remaining = nextBonusCount - building.employeeCount;
+                            let employeeWord = (remaining === 1) ? 'zaměstnance' : 'zaměstnanců';
+                            nextBonusTeaser = `<br><span class="text-blue-400">Další 100% bonus za ${remaining} ${employeeWord}!</span>`;
+                        }
+                        // Research section is not visible for the very first operation (Obrat babku, which is OPERATIONS_DEFINITIONS[0])
+                        // and also not for the 'Prodat dávku' (OPERATIONS_DEFINITIONS[1]) unless currentResearchLevel > 0 (it's already researched).
+                        // So the check needs to be if currentResearchLevel is 0 AND it's not Obrat babku.
+                        const isResearchSectionVisible = (unlockedOperation.currentResearchLevel === 0 && building.unlockedOperationIndex !== 0);
+
+                        buildingElement.innerHTML = `
+                            <div class="item-card-details w-full">
+                                <div class="item-card-title mb-2">
+                                    <span>${building.name} (Koupeno)</span>
+                                    <span class="price">Odemčeno</span>
+                                </div>
+                                <div class="item-card-stats mb-4">
+                                    Nová Operace: "${unlockedOperation.name}" (Zisk/klik: ${formatCurrency(unlockedOperation.baseClickYield)})
+                                </div>
+
+                                <div class="flex flex-col gap-3">
+                                    <div class="compact-section">
+                                        <div class="text-sm font-bold text-lime-300 mb-1">Nábor (${building.employeeName})</div>
+                                        <div class="text-zinc-200 text-xs leading-tight">
+                                            ${building.employeeName} (${building.employeeCount}/100) ${getHeadIcon(building.employeeCount)}
+                                            <br>Výnos zaměstnance: ${formatCurrency(building.employeeInitialYield)}/ks
+                                            <br>Celkový výnos/s: ${formatCurrency(building.employeeCount * individualYield)} <span class="text-yellow-400">(${currentEfficiencyBonusPercentage}%)</span>
+                                            <br>Cena: ${formatCurrency(building.employeeCurrentPrice)}
+                                            ${nextBonusTeaser}
+                                        </div>
+                                    </div>
+                                    <button class="btn-primary hire-employee" data-building-index="${index}" ${!canHire ? 'disabled' : ''}>Najmout</button>
+                                </div>
+
+                                ${isResearchSectionVisible ? `
+                                        <div class="compact-section">
+                                            <div class="compact-section-details">
+                                                <div class="text-sm font-bold text-lime-300 mb-1">Výzkum operace: "${unlockedOperation.name}"</div>
+                                                <div class="text-zinc-400 text-xs leading-tight">
+                                                    Aktuální úroveň: <span class="font-bold text-lime-300">${unlockedOperation.currentResearchLevel}</span>
+                                                    <br>Cena dalšího výzkumu: <span class="font-bold text-red-400">Zdarma</span>
+                                                </div>
+                                            </div>
+                                            <button class="btn-primary start-research-op" data-op-index="${building.unlockedOperationIndex}">
+                                                Zahájit Výzkum!
+                                            </button>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    buildingsList.appendChild(buildingElement);
+                    if (!isBought) { // Mark that we've displayed the first unbought building
+                        nextUnboughtBuildingDisplayed = true;
+                    }
+                }
+            });
+
+            document.querySelectorAll('.buy-building').forEach(button => {
+                button.onclick = (event) => buyBuilding(parseInt(event.target.dataset.index));
+            });
+            document.querySelectorAll('.hire-employee').forEach(button => {
+                button.onclick = (event) => hireEmployee(parseInt(event.target.dataset.buildingIndex));
+            });
+            document.querySelectorAll('.start-research-op').forEach(button => {
+                button.onclick = (event) => startResearchMiniGame(parseInt(event.target.dataset.opIndex));
+            });
+        }
+
+        /**
+         * Koupí budovu.
+         * @param {number} index Index budovy, která se má koupit.
+         */
+        function buyBuilding(index) {
+            if (gameState.gameOver) return;
+            const building = gameState.buildings[index];
+            const isNextAvailable = (index === 0 && !building.isBought) ||
+                                   (index > 0 && gameState.buildings[index - 1].isBought && !building.isBought);
+
+            if (gameState.money >= building.price && isNextAvailable) {
+                gameState.money -= building.price;
+                building.isBought = true;
+                gameState.operations[building.unlockedOperationIndex].unlocked = true;
+                building.strengthBonus = OPERATIONS_DEFINITIONS[building.unlockedOperationIndex].requiredStrength;
+
+                let highestUnlockedOpIndex = 0;
+                for (let i = gameState.operations.length - 1; i >= 0; i--) {
+                    if (gameState.operations[i].unlocked) {
+                        highestUnlockedOpIndex = i;
+                        break;
+                    }
+                }
+                gameState.activeOperationIndex = highestUnlockedOpIndex;
+                
+                gameState.operationLog.push({
+                    type: 'building',
+                    message: `Koupena budova ${building.name}.`,
+                    amount: -Math.round(building.price),
+                    isLoss: false
+                });
+                
+                updateUI();
+            }
+        }
+
+        /**
+         * Spustí mini-hru pro výzkum konkrétní operace.
+         * @param {number} opIndex Index operace, která se má vyzkoumat.
+         */
+        function startResearchMiniGame(opIndex) {
+            if (gameState.gameOver) return;
+            const targetOperation = gameState.operations[opIndex];
+
+            // "Obrat babku" (index 0) is not researchable. Researchable operations have index > 0
+            if (opIndex === 0 || targetOperation.currentResearchLevel > 0) {
+                gameState.operationLog.push({
+                    type: 'info',
+                    message: `Operace "${targetOperation.name}" nepotřebuje další výzkum.`,
+                    amount: undefined, // No amount for info messages
+                    isLoss: false
+                });
+                updateUI();
+                return;
+            }
+
+            currentResearchOperationIndex = opIndex;
+            miniGameCode = MINI_GAME_CODE;
+            codeDisplay.textContent = miniGameCode;
+            codeInput.value = '';
+            miniGameFeedback.textContent = '';
+            timerDisplay.textContent = `Čas: ${MINI_GAME_DURATION.toFixed(2)}s`;
+            codeInput.disabled = true;
+            miniGameStartButton.disabled = false;
+            miniGameModal.classList.remove('hidden');
+            codeInput.focus();
+        }
+
+        /**
+         * Spustí odpočet mini-hry.
+         */
+        function startMiniGameCountdown() {
+            miniGameTimeRemaining = MINI_GAME_DURATION;
+            miniGameStartButton.disabled = true;
+            codeInput.disabled = false;
+            codeInput.focus();
+            miniGameFeedback.textContent = '';
+
+            miniGameTimer = setInterval(() => {
+                miniGameTimeRemaining -= 0.01;
+                if (miniGameTimeRemaining <= 0) {
+                    clearInterval(miniGameTimer);
+                    miniGameTimeRemaining = 0;
+                    timerDisplay.textContent = `Čas: 0.00s`;
+                    miniGameFeedback.textContent = 'Čas vypršel! Zkus to znovu.';
+                    miniGameFeedback.style.color = '#ff6b6b';
+                    codeInput.disabled = true;
+                    miniGameStartButton.disabled = false;
+                } else {
+                    timerDisplay.textContent = `Čas: ${miniGameTimeRemaining.toFixed(2)}s`;
+                }
+            }, 10);
+        }
+
+        /**
+         * Kontroluje zadávaný kód v mini-hře.
+         */
+        function checkMiniGameCode() {
+            if (codeInput.value === miniGameCode) {
+                clearInterval(miniGameTimer);
+                miniGameFeedback.textContent = 'Hack úspěšný!';
+                miniGameFeedback.style.color = '#79d70f';
+                codeInput.disabled = true;
+                miniGameStartButton.disabled = true;
+
+                const researchedOp = gameState.operations[currentResearchOperationIndex];
+                researchedOp.currentResearchLevel++;
+                researchedOp.currentBaseClickYield *= researchedOp.researchYieldMultiplier;
+                researchedOp.currentResearchPrice *= 1.5;
+
+                gameState.operationLog.push({
+                    type: 'research',
+                    message: `Technologie vyzkoumána: "${researchedOp.name}".`,
+                    amount: 0, // Research is free, so 0 cost
+                    isLoss: false
+                });
+                // New log entry for new operation activation
+                gameState.operationLog.push({
+                    type: 'activated',
+                    message: `Dobra prace nová operace "${researchedOp.name}" aktivována!`,
+                    amount: undefined,
+                    isLoss: false
+                });
+
+                setTimeout(() => {
+                    miniGameModal.classList.add('hidden');
+                    updateUI();
+                }, 1000);
+            } else if (codeInput.value.length >= miniGameCode.length) {
+                miniGameFeedback.textContent = 'Špatný kód! Zkus to znovu.';
+                miniGameFeedback.style.color = '#ff6b6b';
+            } else {
+                miniGameFeedback.textContent = '';
+            }
+        }
+
+        /**
+         * Najme zaměstnance pro zadanou budovu.
+         * @param {number} index Index budovy, pro kterou se má najmout zaměstnanec.
+         */
+        function hireEmployee(index) {
+            if (gameState.gameOver) return;
+            const building = gameState.buildings[index];
+            if (gameState.money >= building.employeeCurrentPrice && building.employeeCount < 100) {
+                gameState.money -= building.employeeCurrentPrice;
+                building.employeeCount++;
+                
+                gameState.operationLog.push({
+                    type: 'employee',
+                    message: `Najmut ${building.employeeName} pro ${building.name} (celkem ${building.employeeCount}).`,
+                    amount: -Math.round(building.employeeCurrentPrice / 1.15), // Log original price for consistency, now negative
+                    isLoss: false
+                });
+
+                building.employeeCurrentPrice *= 1.15;
+                updateUI();
+            }
+        }
+
+        /**
+         * Zkontroluje a aktualizuje stav dokončení všech achievementů.
+         */
+        function checkAchievements() {
+            gameState.achievements.forEach(achievement => {
+                if (!achievement.completed && achievement.check(gameState)) {
+                    achievement.completed = true;
+                    gameState.operationLog.push({
+                        type: 'achievement',
+                        message: `Splněn achievement: "${achievement.description}"!`,
+                        amount: undefined, // No amount for achievement completion itself
+                        isLoss: false
+                    });
+                }
+            });
+        }
+
+        /**
+         * Vykreslí seznam achievementů do UI.
+         */
+        function renderAchievements() {
+            achievementsList.innerHTML = '';
+            gameState.achievements.forEach((achievement, index) => {
+                const achievementElement = document.createElement('div');
+                achievementElement.className = `achievement-item ${achievement.completed ? 'completed' : ''}`;
+                achievementElement.innerHTML = `
+                    <div class="achievement-item-header">
+                        <div>
+                            <span class="check-icon">${achievement.completed ? '&#10003;' : '&#9633;'}</span>
+                            <span>${achievement.description}</span>
+                        </div>
+                        <div class="text-lime-400 font-bold">${formatCurrency(achievement.reward)}</div>
+                    </div>
+                    ${achievement.completed && !achievement.rewardClaimed ?
+                        `<button class="btn-primary mt-2" data-index="${index}">Claim Reward</button>` : ''
+                    }
+                `;
+                achievementsList.appendChild(achievementElement);
+            });
+
+            document.querySelectorAll('#achievements-list .btn-primary').forEach(button => {
+                button.onclick = (event) => claimAchievementReward(parseInt(event.target.dataset.index));
+            });
+        }
+
+        /**
+         * Udělí odměnu za achievement.
+         * @param {number} index Index achievementu, za který se má vybrat odměna.
+         */
+        function claimAchievementReward(index) {
+            if (gameState.gameOver) return;
+            const achievement = gameState.achievements[index];
+            if (achievement.completed && !achievement.rewardClaimed) {
+                gameState.money += achievement.reward;
+                achievement.rewardClaimed = true;
+                
+                gameState.operationLog.push({
+                    type: 'reward',
+                    message: `Získaná odměna za achievement "${achievement.description}".`,
+                    amount: achievement.reward,
+                    isLoss: false
+                });
+
+                updateUI();
+            }
+        }
+
+        /**
+         * Vykreslí log operací do UI.
+         */
+        function renderOperationLog() {
+            operationLogElement.innerHTML = '';
+            // Display only up to the last 10 entries
+            const entriesToDisplay = gameState.operationLog.slice(-10).reverse();
+
+            entriesToDisplay.forEach(entry => {
+                const div = document.createElement('div');
+                // Apply 'loss' class if it's a financial loss (amount < 0) or an action outcome loss (isLoss true)
+                div.className = `log-entry ${entry.isLoss || (entry.amount !== undefined && entry.amount < 0) ? 'loss' : ''} ${entry.type === 'activated' ? 'research-activated' : ''}`;
+
+                // Determine the prefix text based on entry type
+                let prefixText = '';
+                switch (entry.type) {
+                    case 'action':
+                        prefixText = 'Akce:';
+                        break;
+                    case 'gang':
+                        prefixText = 'Gang:';
+                        break;
+                    case 'building':
+                        prefixText = 'Budova:';
+                        break;
+                    case 'research':
+                        prefixText = 'Výzkum:';
+                        break;
+                    case 'employee':
+                        prefixText = 'Zaměstnanec:';
+                        break;
+                    case 'achievement':
+                        prefixText = 'Achievement:';
+                        break;
+                    case 'reward':
+                        prefixText = 'Odměna:';
+                        break;
+                    case 'info':
+                        prefixText = 'Info:';
+                        break;
+                    case 'activated':
+                        prefixText = 'Aktivace:'; // New prefix for activated operations
+                        break;
+                }
+
+                // Determine the amount text based on positive or negative amount
+                let amountDisplay = '';
+                if (entry.amount !== undefined) {
+                    if (entry.amount < 0) {
+                        amountDisplay = `Odebráno: ${formatCurrency(entry.amount)}`;
+                    } else {
+                        amountDisplay = `Získáno: ${formatCurrency(entry.amount)}`;
+                    }
+                }
+
+                div.innerHTML = `
+                    <span class="log-prefix">> ${prefixText}</span>
+                    <span class="log-message">${entry.message}</span>
+                    <span class="log-amount">${amountDisplay}</span>
+                `;
+                operationLogElement.appendChild(div);
+            });
+        }
+
+        /**
+         * Inicializuje herní stav a nastaví herní smyčku.
+         */
+        function initGameCore() { // Renamed to avoid confusion with the start button handler
+            // Inicializace UI
+            updateUI();
+
+            // Nastavení hlavní herní smyčky pro pasivní příjem
+            setInterval(() => {
+                if (gameState.gameOver) return;
+
+                // Přidá pasivní příjem
+                gameState.money += calculatePassiveIncome();
+
+                updateUI(); // Voláme updateUI v každém cyklu intervalu
+            }, 1000); // Smyčka se spouští každou sekundu
+        }
+
+        // --- Posluchače událostí ---
+        clickButton.addEventListener('click', handleClick);
+
+        // Posluchače pro záložková tlačítka
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Only allow click if the tab is not disabled
+                if (button.disabled) {
+                    return; // Do nothing if disabled
+                }
+
+                tabButtons.forEach(btn => btn.classList.remove('active-tab'));
+                tabPanels.forEach(panel => panel.classList.add('hidden'));
+
+                button.classList.add('active-tab');
+                document.getElementById(button.dataset.tab).classList.remove('hidden');
+
+                // Znovu vykreslí relevantní seznamy při přepínání záložek, aby byly aktuální
+                if (button.dataset.tab === 'ai-bots') {
+                    renderAIBots();
+                } else if (button.dataset.tab === 'buildings') {
+                    renderBuildings(); // Nyní renderuje budovy
+                }
+                else if (button.dataset.tab === 'achievements') {
+                    renderAchievements();
+                }
+            });
+        });
+
+        // Mini-game event listeners
+        miniGameStartButton.addEventListener('click', startMiniGameCountdown);
+        codeInput.addEventListener('input', checkMiniGameCode);
+        miniGameCancelButton.addEventListener('click', () => { // Added missing event listener for cancel button
+            clearInterval(miniGameTimer);
+            miniGameModal.classList.add('hidden');
+            updateUI();
+        });
+
+        // Event listener for the "Start Game" button on the welcome modal
+        startGameButton.addEventListener('click', () => {
+            welcomeModal.classList.add('hidden'); // Hide modal
+            gameContainer.classList.remove('hidden'); // Show game
+            initGameCore(); // Start the game's core logic
+        });
+    </script>
+</body>
+</html>
